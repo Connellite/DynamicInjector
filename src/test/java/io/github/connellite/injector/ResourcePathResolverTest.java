@@ -13,6 +13,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ResourcePathResolverTest {
 
     @Test
+    void combineRequestPathWithPathInfo() {
+        assertEquals("/app/home", ResourcePathResolver.combineRequestPath("/app", "/home"));
+        assertEquals("/home", ResourcePathResolver.combineRequestPath("", "/home"));
+        assertEquals("/app", ResourcePathResolver.combineRequestPath("/app", null));
+    }
+
+    @Test
     void resolveBasicPath() {
         ResourcePathResolver resolver = new ResourcePathResolver("/base/path");
         Path result = resolver.resolveResourcePath("/styles/main.css", ".css");

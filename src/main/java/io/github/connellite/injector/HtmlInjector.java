@@ -18,7 +18,9 @@ public class HtmlInjector {
         return new HtmlInjector(html);
     }
 
-    /** Injects CSS into {@code <head>}. */
+    /**
+     * Injects CSS into {@code <head>}.
+     */
     public HtmlInjector injectCss(String css) {
         if (IoUtils.isBlank(css)) {
             return this;
@@ -29,7 +31,9 @@ public class HtmlInjector {
         return this;
     }
 
-    /** Injects JavaScript at the end of {@code <body>}. */
+    /**
+     * Injects JavaScript at the end of {@code <body>}.
+     */
     public HtmlInjector injectJs(String js) {
         if (IoUtils.isBlank(js)) {
             return this;
@@ -40,7 +44,9 @@ public class HtmlInjector {
         return this;
     }
 
-    /** Injects an HTML fragment before the closing {@code </body>} tag. */
+    /**
+     * Injects an HTML fragment before the closing {@code </body>} tag.
+     */
     public HtmlInjector injectHtmlFragment(String fragment) {
         if (IoUtils.isBlank(fragment)) {
             return this;

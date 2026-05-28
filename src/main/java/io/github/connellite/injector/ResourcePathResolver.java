@@ -1,5 +1,12 @@
 package io.github.connellite.injector;
 
+#if JAKARTA
+import jakarta.servlet.http.HttpServletRequest;
+#else
+
+import javax.servlet.http.HttpServletRequest;
+#endif
+
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -11,6 +18,29 @@ public class ResourcePathResolver {
 
     public ResourcePathResolver(String resourceRoot) {
         this.resourceRoot = resourceRoot;
+    }
+
+    /**
+     * Builds the path used to resolve injectable resources from the current request.
+     * Combines {@code servletPath} and {@code pathInfo} for wildcard mappings.
+     */
+    public static String requestPath(HttpServletRequest request) {
+        return combineRequestPath(request.getServletPath(), request.getPathInfo());
+    }
+
+    static String combineRequestPath(String servletPath, String pathInfo) {
+        String normalizedServletPath = nullToEmpty(servletPath);
+        if (pathInfo == null || pathInfo.isEmpty()) {
+            return normalizedServletPath;
+        }
+        if (normalizedServletPath.isEmpty()) {
+            return pathInfo;
+        }
+        return normalizedServletPath + pathInfo;
+    }
+
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     public Path resolveResourcePath(String servletPath, String extension) {
@@ -33,7 +63,9 @@ public class ResourcePathResolver {
         return finalPath;
     }
 
-    /** URI percent-decoding similar to Spring's {@code UriUtils.decode}. */
+    /**
+     * URI percent-decoding similar to Spring's {@code UriUtils.decode}.
+     */
     @SuppressWarnings("SameParameterValue")
     static String uriDecode(String source, Charset charset) {
         int length = source.length();
