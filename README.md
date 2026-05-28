@@ -57,7 +57,7 @@ For request `/home` or `/app/home` (mapping dependent), the filter looks for `ho
 
 ## Requirements
 
-- Java 17+ on the server (Tomcat 11) or Java 11+ (Tomcat 10.1) / Java 8+ (Tomcat 9 with `javax` JAR)
+- Java 17+ on the server
 - Read access to the resource directory
 - Downstream servlets must write through the wrapped response (normal for filters)
 
