@@ -5,7 +5,6 @@ import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 #else
-
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
@@ -38,6 +37,7 @@ class StubHttpServletResponse implements HttpServletResponse {
         return url;
     }
 
+#if !JAKARTA
     @Override
     public String encodeUrl(String url) {
         return url;
@@ -47,6 +47,7 @@ class StubHttpServletResponse implements HttpServletResponse {
     public String encodeRedirectUrl(String url) {
         return url;
     }
+#endif
 
     @Override
     public void sendError(int sc, String msg) {
@@ -88,9 +89,11 @@ class StubHttpServletResponse implements HttpServletResponse {
     public void setStatus(int sc) {
     }
 
+#if !JAKARTA
     @Override
     public void setStatus(int sc, String sm) {
     }
+#endif
 
     @Override
     public int getStatus() {

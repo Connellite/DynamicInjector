@@ -1,7 +1,11 @@
 package io.github.connellite.injector;
-
+#if JAKARTA
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.WriteListener;
+#else
 import javax.servlet.ServletOutputStream;
 import javax.servlet.WriteListener;
+#endif
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
