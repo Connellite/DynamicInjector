@@ -1,9 +1,9 @@
 package io.github.connellite.injector;
+import lombok.RequiredArgsConstructor;
 
 #if JAKARTA
 import jakarta.servlet.http.HttpServletRequest;
 #else
-
 import javax.servlet.http.HttpServletRequest;
 #endif
 
@@ -13,12 +13,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HexFormat;
 
+@RequiredArgsConstructor
 public class ResourcePathResolver {
     private final String resourceRoot;
-
-    public ResourcePathResolver(String resourceRoot) {
-        this.resourceRoot = resourceRoot;
-    }
 
     /**
      * Builds the path used to resolve injectable resources from the current request.

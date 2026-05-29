@@ -26,7 +26,7 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
         NONE, WRITER, STREAM
     }
 
-    private final int maxBufferBytes;
+    private final long maxBufferBytes;
 
     private OutputChannel channel = OutputChannel.NONE;
     private CharArrayWriter charBuffer;
@@ -34,7 +34,7 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
     private ServletOutputStream servletOutputStream;
     private PrintWriter writer;
 
-    public CharResponseWrapper(HttpServletResponse response, int maxBufferBytes) {
+    public CharResponseWrapper(HttpServletResponse response, long maxBufferBytes) {
         super(response);
         if (maxBufferBytes <= 0) {
             throw new IllegalArgumentException("maxBufferBytes must be positive");
@@ -56,7 +56,7 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
     }
 
     @Override
-    public PrintWriter getWriter() throws IOException {
+    public PrintWriter getWriter() {
         if (channel == OutputChannel.STREAM) {
             throw new IllegalStateException("getOutputStream() has already been called on this response");
         }

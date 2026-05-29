@@ -1,4 +1,5 @@
 package io.github.connellite.injector;
+import lombok.extern.java.Log;
 
 #if JAKARTA
 import jakarta.servlet.DispatcherType;
@@ -11,7 +12,6 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 #else
-
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -25,20 +25,18 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
+@Log
 public class DynamicResourceInjectFilter implements Filter {
 
     static final String PARAM_RESOURCES = "resources";
     static final String PARAM_MAX_BUFFER_BYTES = "maxBufferBytes";
-    static final int DEFAULT_MAX_BUFFER_BYTES = 5 * 1024 * 1024;
-
-    private static final Logger LOGGER = Logger.getLogger(DynamicResourceInjectFilter.class.getName());
+    static final long DEFAULT_MAX_BUFFER_BYTES = 5 * 1024 * 1024;
 
     private ResourcePathResolver resolver;
-    private ResourceLoader loader;
-    private int maxBufferBytes = DEFAULT_MAX_BUFFER_BYTES;
+    private long maxBufferBytes = DEFAULT_MAX_BUFFER_BYTES;
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
@@ -46,25 +44,24 @@ public class DynamicResourceInjectFilter implements Filter {
 
         if (resourceRoot == null || resourceRoot.trim().isEmpty()) {
             String errorMsg = "Filter init parameter '" + PARAM_RESOURCES + "' is not configured.";
-            LOGGER.severe(errorMsg);
+            log.severe(errorMsg);
             throw new ServletException(errorMsg);
         }
 
         File rootDir = new File(resourceRoot);
         if (!rootDir.exists() || !rootDir.isDirectory() || !rootDir.canRead()) {
             String errorMsg = "Resource directory does not exist or is not readable: " + resourceRoot;
-            LOGGER.severe(errorMsg);
+            log.severe(errorMsg);
             throw new ServletException(errorMsg);
         }
 
-        maxBufferBytes = parsePositiveInt(
+        maxBufferBytes = parsePositiveLong(
                 filterConfig.getInitParameter(PARAM_MAX_BUFFER_BYTES),
                 DEFAULT_MAX_BUFFER_BYTES,
                 PARAM_MAX_BUFFER_BYTES
         );
 
         this.resolver = new ResourcePathResolver(resourceRoot);
-        this.loader = new ResourceLoader();
     }
 
     @Override
@@ -86,10 +83,10 @@ public class DynamicResourceInjectFilter implements Filter {
             chain.doFilter(request, wrappedResponse);
             writeResponse(httpRequest, httpResponse, wrappedResponse);
         } catch (SecurityException e) {
-            LOGGER.log(Level.WARNING, "Blocked resource path for {0}: {1}", new Object[]{httpRequest.getRequestURI(), e.getMessage()});
+            log.log(Level.WARNING, "Blocked resource path for {0}: {1}", new Object[]{httpRequest.getRequestURI(), e.getMessage()});
             sendErrorIfPossible(httpResponse, HttpServletResponse.SC_FORBIDDEN, e);
         } catch (IllegalArgumentException e) {
-            LOGGER.log(Level.WARNING, "Invalid request path encoding for {0}: {1}", new Object[]{httpRequest.getRequestURI(), e.getMessage()});
+            log.log(Level.WARNING, "Invalid request path encoding for {0}: {1}", new Object[]{httpRequest.getRequestURI(), e.getMessage()});
             sendErrorIfPossible(httpResponse, HttpServletResponse.SC_BAD_REQUEST, e);
         }
     }
@@ -97,13 +94,12 @@ public class DynamicResourceInjectFilter implements Filter {
     @Override
     public void destroy() {
         resolver = null;
-        loader = null;
     }
 
     private void writeResponse(HttpServletRequest request, HttpServletResponse response,
                                CharResponseWrapper wrappedResponse) throws IOException {
         if (response.isCommitted()) {
-            LOGGER.fine(() -> "Response already committed for " + request.getRequestURI() + ", skipping injection");
+            log.fine(() -> "Response already committed for " + request.getRequestURI() + ", skipping injection");
             return;
         }
 
@@ -120,13 +116,13 @@ public class DynamicResourceInjectFilter implements Filter {
         String html = wrappedResponse.getBodyAsString();
         String requestPath = ResourcePathResolver.requestPath(request);
 
-        File cssFile = resolver.resolveResourcePath(requestPath, ".css").toFile();
-        File jsFile = resolver.resolveResourcePath(requestPath, ".js").toFile();
-        File htmlFile = resolver.resolveResourcePath(requestPath, ".html").toFile();
+        Path cssPath = resolver.resolveResourcePath(requestPath, ".css");
+        Path jsPath = resolver.resolveResourcePath(requestPath, ".js");
+        Path htmlPath = resolver.resolveResourcePath(requestPath, ".html");
 
-        String css = loader.loadResource(cssFile);
-        String js = loader.loadResource(jsFile);
-        String fragment = loader.loadResource(htmlFile);
+        String css = ResourceLoader.loadResource(cssPath);
+        String js = ResourceLoader.loadResource(jsPath);
+        String fragment = ResourceLoader.loadResource(htmlPath);
 
         String modifiedHtml = HtmlInjector.parse(html)
                 .injectCss(css)
@@ -146,12 +142,12 @@ public class DynamicResourceInjectFilter implements Filter {
         return contentType != null && contentType.toLowerCase().startsWith("text/html");
     }
 
-    private static int parsePositiveInt(String rawValue, int defaultValue, String paramName) throws ServletException {
+    private static long parsePositiveLong(String rawValue, long defaultValue, String paramName) throws ServletException {
         if (rawValue == null || rawValue.trim().isEmpty()) {
             return defaultValue;
         }
         try {
-            int value = Integer.parseInt(rawValue.trim());
+            long value = Long.parseLong(rawValue.trim());
             if (value <= 0) {
                 throw new NumberFormatException("not positive");
             }

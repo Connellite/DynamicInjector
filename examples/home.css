@@ -1,0 +1,26 @@
+/* Example stylesheet injected into <head> */
+:root {
+    --accent: #2563eb;
+    --accent-soft: #dbeafe;
+}
+
+.di-banner {
+    margin: 16px 0;
+    padding: 12px 16px;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    background: var(--accent-soft);
+    color: #0f172a;
+    font-family: Arial, sans-serif;
+}
+
+.di-banner__title {
+    margin: 0 0 6px;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.di-banner__text {
+    margin: 0;
+    font-size: 14px;
+}

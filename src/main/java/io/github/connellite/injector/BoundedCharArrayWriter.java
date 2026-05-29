@@ -1,14 +1,13 @@
 package io.github.connellite.injector;
 
+import lombok.RequiredArgsConstructor;
+
 import java.io.CharArrayWriter;
 
+@RequiredArgsConstructor
 public final class BoundedCharArrayWriter extends CharArrayWriter {
 
-    private final int maxChars;
-
-    public BoundedCharArrayWriter(int maxChars) {
-        this.maxChars = maxChars;
-    }
+    private final long maxChars;
 
     @Override
     public void write(int c) {

@@ -1,14 +1,14 @@
 package io.github.connellite.injector;
 
+import lombok.experimental.UtilityClass;
+
 import java.io.File;
 
 /**
  * Small I/O helpers replacing the former commons-io usage in this project.
  */
+@UtilityClass
 public final class IoUtils {
-
-    private IoUtils() {
-    }
 
     public static String separatorsToSystem(String path) {
         if (path == null || path.isEmpty()) {

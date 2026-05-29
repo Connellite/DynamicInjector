@@ -1,4 +1,6 @@
 package io.github.connellite.injector;
+import lombok.RequiredArgsConstructor;
+
 #if JAKARTA
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.WriteListener;
@@ -9,15 +11,11 @@ import javax.servlet.WriteListener;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
+@RequiredArgsConstructor
 public final class BufferedServletOutputStream extends ServletOutputStream {
 
     private final ByteArrayOutputStream buffer;
-    private final int maxBufferBytes;
-
-    public BufferedServletOutputStream(ByteArrayOutputStream buffer, int maxBufferBytes) {
-        this.buffer = buffer;
-        this.maxBufferBytes = maxBufferBytes;
-    }
+    private final long maxBufferBytes;
 
     @Override
     public boolean isReady() {

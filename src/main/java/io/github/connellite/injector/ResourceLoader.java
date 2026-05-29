@@ -1,26 +1,28 @@
 package io.github.connellite.injector;
 
-import java.io.File;
+import lombok.experimental.UtilityClass;
+import lombok.extern.java.Log;
+
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
+@Log
+@UtilityClass
 public class ResourceLoader {
-    private static final Logger LOGGER = Logger.getLogger(ResourceLoader.class.getName());
-
     /**
      * Loads file contents when the file exists and is readable; otherwise returns an empty string.
      */
-    public String loadResource(File file) {
-        if (file == null || !file.exists() || !file.isFile() || !file.canRead()) {
+    public static String loadResource(Path path) {
+        if (path == null || !Files.isRegularFile(path) || !Files.isReadable(path)) {
             return "";
         }
 
         try {
-            return Files.readString(file.toPath(), StandardCharsets.UTF_8);
+            return Files.readString(path, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, e.getMessage(), e);
+            log.log(Level.SEVERE, e.getMessage(), e);
             return "";
         }
     }
