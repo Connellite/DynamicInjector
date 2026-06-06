@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.logging.Level;
 
 @Log
@@ -33,10 +34,13 @@ public class DynamicResourceInjectFilter implements Filter {
 
     static final String PARAM_RESOURCES = "resources";
     static final String PARAM_MAX_BUFFER_BYTES = "maxBufferBytes";
+    static final String PARAM_BUFFER_LIMIT_DISABLED = "bufferLimitDisabled";
+    static final String PARAM_EXCLUDE_URL_PATTERNS = "excludeUrlPatterns";
     static final long DEFAULT_MAX_BUFFER_BYTES = 5 * 1024 * 1024;
 
     private ResourcePathResolver resolver;
     private long maxBufferBytes = DEFAULT_MAX_BUFFER_BYTES;
+    private List<String> excludeUrlPatterns = List.of();
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
@@ -55,11 +59,19 @@ public class DynamicResourceInjectFilter implements Filter {
             throw new ServletException(errorMsg);
         }
 
-        maxBufferBytes = parsePositiveLong(
-                filterConfig.getInitParameter(PARAM_MAX_BUFFER_BYTES),
-                DEFAULT_MAX_BUFFER_BYTES,
-                PARAM_MAX_BUFFER_BYTES
+        excludeUrlPatterns = UrlPatternMatcher.parsePatterns(
+                filterConfig.getInitParameter(PARAM_EXCLUDE_URL_PATTERNS)
         );
+
+        if (parseBoolean(filterConfig.getInitParameter(PARAM_BUFFER_LIMIT_DISABLED), false)) {
+            maxBufferBytes = CharResponseWrapper.UNLIMITED_BUFFER_BYTES;
+        } else {
+            maxBufferBytes = parsePositiveLong(
+                    filterConfig.getInitParameter(PARAM_MAX_BUFFER_BYTES),
+                    DEFAULT_MAX_BUFFER_BYTES,
+                    PARAM_MAX_BUFFER_BYTES
+            );
+        }
 
         this.resolver = new ResourcePathResolver(resourceRoot);
     }
@@ -74,6 +86,11 @@ public class DynamicResourceInjectFilter implements Filter {
         }
 
         if (httpRequest.getDispatcherType() != DispatcherType.REQUEST) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        if (isExcluded(httpRequest)) {
             chain.doFilter(request, response);
             return;
         }
@@ -138,12 +155,35 @@ public class DynamicResourceInjectFilter implements Filter {
         response.getOutputStream().write(body);
     }
 
+    private boolean isExcluded(HttpServletRequest request) {
+        if (excludeUrlPatterns.isEmpty()) {
+            return false;
+        }
+        return UrlPatternMatcher.matchesAny(requestPathWithoutContext(request), excludeUrlPatterns);
+    }
+
+    static String requestPathWithoutContext(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        if (contextPath != null && !contextPath.isEmpty() && path.startsWith(contextPath)) {
+            path = path.substring(contextPath.length());
+        }
+        return path.isEmpty() ? "/" : path;
+    }
+
     private static boolean isHtmlContent(String contentType) {
         return contentType != null && contentType.toLowerCase().startsWith("text/html");
     }
 
-    private static long parsePositiveLong(String rawValue, long defaultValue, String paramName) throws ServletException {
+    private static boolean parseBoolean(String rawValue, boolean defaultValue) {
         if (rawValue == null || rawValue.trim().isEmpty()) {
+            return defaultValue;
+        }
+        return Boolean.parseBoolean(rawValue.trim());
+    }
+
+    private static long parsePositiveLong(String rawValue, long defaultValue, String paramName) throws ServletException {
+        if (rawValue == null || rawValue.isBlank()) {
             return defaultValue;
         }
         try {

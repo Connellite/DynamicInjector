@@ -22,6 +22,8 @@ import java.nio.charset.StandardCharsets;
  */
 public class CharResponseWrapper extends HttpServletResponseWrapper {
 
+    static final long UNLIMITED_BUFFER_BYTES = Long.MAX_VALUE;
+
     private enum OutputChannel {
         NONE, WRITER, STREAM
     }

@@ -39,6 +39,16 @@ For request `/home` or `/app/home` (mapping dependent), the filter looks for `ho
         <param-name>maxBufferBytes</param-name>
         <param-value>5242880</param-value>
     </init-param>
+    <!-- Optional: skip buffering/injection for matching paths (Spring Ant-style) -->
+    <init-param>
+        <param-name>excludeUrlPatterns</param-name>
+        <param-value>/Download/**</param-value>
+    </init-param>
+    <!-- Optional: disable response size limit (default false) -->
+    <init-param>
+        <param-name>bufferLimitDisabled</param-name>
+        <param-value>false</param-value>
+    </init-param>
 </filter>
 
 <filter-mapping>
@@ -54,6 +64,8 @@ For request `/home` or `/app/home` (mapping dependent), the filter looks for `ho
 |------|----------|-------------|
 | `resources` | yes | Directory with `.css` / `.js` / `.html` fragments |
 | `maxBufferBytes` | no | Max buffered response size (default `5242880`) |
+| `excludeUrlPatterns` | no | Comma- or space-separated Ant-style patterns to bypass the filter (`/Download/**`, `/*.jsp`, `/exact/path`). Based on [Spring AntPathMatcher](https://github.com/spring-projects/spring-framework/blob/main/spring-core/src/main/java/org/springframework/util/AntPathMatcher.java). |
+| `bufferLimitDisabled` | no | When `true`, disables the response buffer size limit (default `false`) |
 
 ## Requirements
 

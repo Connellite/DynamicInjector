@@ -77,4 +77,16 @@ class CharResponseWrapperTest {
         assertNotNull(error.getMessage());
         assertTrue(error.getMessage().contains("buffer limit"));
     }
+
+    @Test
+    void allowsUnlimitedBufferSize() throws IOException {
+        CharResponseWrapper wrapper = new CharResponseWrapper(
+                new StubHttpServletResponse(),
+                CharResponseWrapper.UNLIMITED_BUFFER_BYTES
+        );
+
+        wrapper.getOutputStream().write(new byte[10_000]);
+
+        assertEquals(10_000, wrapper.getBodyAsBytes().length);
+    }
 }
