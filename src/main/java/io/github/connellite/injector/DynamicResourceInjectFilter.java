@@ -32,14 +32,14 @@ import java.util.logging.Level;
 public class DynamicResourceInjectFilter implements Filter {
 
     private ResourcePathResolver resolver;
-    private long maxBufferChars = FilterConfigParser.DEFAULT_MAX_BUFFER_BYTES;
+    private long maxBufferSize = FilterConfigParser.DEFAULT_MAX_BUFFER_SIZE;
     private List<String> excludeUrlPatterns = List.of();
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
         try {
             FilterConfigParser.Settings settings = FilterConfigParser.parse(filterConfig);
-            this.maxBufferChars = settings.maxBufferChars();
+            this.maxBufferSize = settings.maxBufferSize();
             this.excludeUrlPatterns = settings.excludeUrlPatterns();
             this.resolver = new ResourcePathResolver(settings.resourceRoot());
         } catch (ServletException e) {
@@ -67,7 +67,7 @@ public class DynamicResourceInjectFilter implements Filter {
             return;
         }
 
-        CharResponseWrapper wrappedResponse = new CharResponseWrapper(httpResponse, maxBufferChars);
+        CharResponseWrapper wrappedResponse = new CharResponseWrapper(httpResponse, maxBufferSize);
         try {
             chain.doFilter(request, wrappedResponse);
             writeResponse(httpRequest, httpResponse, wrappedResponse);
@@ -92,12 +92,16 @@ public class DynamicResourceInjectFilter implements Filter {
             return;
         }
 
+        if (wrappedResponse.isPassthrough()) {
+            return;
+        }
+
         if (!wrappedResponse.hasBody()) {
             return;
         }
 
-        if (!isHtmlContent(wrappedResponse.getContentType())) {
-            // resetBuffer() only; preserves headers set by the downstream servlet.
+        // Fallback only for buffered non-HTML bodies; passthrough responses are already written.
+        if (!CharResponseWrapper.isHtmlContent(wrappedResponse.getContentType())) {
             response.resetBuffer();
             wrappedResponse.writeBodyTo(response);
             return;
@@ -144,10 +148,6 @@ public class DynamicResourceInjectFilter implements Filter {
             path = path.substring(contextPath.length());
         }
         return path.isEmpty() ? "/" : path;
-    }
-
-    private static boolean isHtmlContent(String contentType) {
-        return contentType != null && contentType.toLowerCase().startsWith("text/html");
     }
 
     private static void sendErrorIfPossible(HttpServletResponse response, int status, Throwable cause) throws ServletException, IOException {

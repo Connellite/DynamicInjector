@@ -14,7 +14,7 @@ import java.util.List;
 @UtilityClass
 final class UrlPatternMatcher {
 
-    private static final class PathMatherHolder {
+    private static final class PathMatcherHolder {
         private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
     }
 
@@ -30,7 +30,7 @@ final class UrlPatternMatcher {
 
     static boolean matchesAny(String path, List<String> patterns) {
         for (String pattern : patterns) {
-            if (PathMatherHolder.PATH_MATCHER.match(pattern, path)) {
+            if (PathMatcherHolder.PATH_MATCHER.match(pattern, path)) {
                 return true;
             }
         }
@@ -38,6 +38,6 @@ final class UrlPatternMatcher {
     }
 
     static boolean matches(String pattern, String path) {
-        return PathMatherHolder.PATH_MATCHER.match(pattern, path);
+        return PathMatcherHolder.PATH_MATCHER.match(pattern, path);
     }
 }

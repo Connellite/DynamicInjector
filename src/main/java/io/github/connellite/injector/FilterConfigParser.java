@@ -16,12 +16,12 @@ import java.util.List;
 final class FilterConfigParser {
 
     static final String PARAM_RESOURCES = "resources";
-    static final String PARAM_MAX_BUFFER_BYTES = "maxBufferBytes";
+    static final String PARAM_MAX_BUFFER_SIZE = "maxBufferSize";
     static final String PARAM_BUFFER_LIMIT_DISABLED = "bufferLimitDisabled";
     static final String PARAM_EXCLUDE_URL_PATTERNS = "excludeUrlPatterns";
-    static final long DEFAULT_MAX_BUFFER_BYTES = 5 * 1024 * 1024;
+    static final long DEFAULT_MAX_BUFFER_SIZE = 5 * 1024 * 1024;
 
-    record Settings(String resourceRoot, long maxBufferChars, List<String> excludeUrlPatterns) {
+    record Settings(String resourceRoot, long maxBufferSize, List<String> excludeUrlPatterns) {
     }
 
     static Settings parse(FilterConfig filterConfig) throws ServletException {
@@ -39,18 +39,18 @@ final class FilterConfigParser {
                 filterConfig.getInitParameter(PARAM_EXCLUDE_URL_PATTERNS)
         );
 
-        long maxBufferChars;
+        long maxBufferSize;
         if (parseBoolean(filterConfig.getInitParameter(PARAM_BUFFER_LIMIT_DISABLED), false)) {
-            maxBufferChars = CharResponseWrapper.UNLIMITED_BUFFER_CHARS;
+            maxBufferSize = BufferLimits.UNLIMITED;
         } else {
-            maxBufferChars = parsePositiveLong(
-                    filterConfig.getInitParameter(PARAM_MAX_BUFFER_BYTES),
-                    DEFAULT_MAX_BUFFER_BYTES,
-                    PARAM_MAX_BUFFER_BYTES
+            maxBufferSize = parsePositiveLong(
+                    filterConfig.getInitParameter(PARAM_MAX_BUFFER_SIZE),
+                    DEFAULT_MAX_BUFFER_SIZE,
+                    PARAM_MAX_BUFFER_SIZE
             );
         }
 
-        return new Settings(resourceRoot, maxBufferChars, excludeUrlPatterns);
+        return new Settings(resourceRoot, maxBufferSize, excludeUrlPatterns);
     }
 
     static boolean parseBoolean(String rawValue, boolean defaultValue) {

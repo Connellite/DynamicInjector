@@ -35,6 +35,10 @@ class StubHttpServletResponse implements HttpServletResponse {
         return contentLength;
     }
 
+    byte[] getBodyBytes() {
+        return body.toByteArray();
+    }
+
     @Override
     public void addCookie(Cookie cookie) {
     }
@@ -149,6 +153,11 @@ class StubHttpServletResponse implements HttpServletResponse {
                 @Override
                 public void write(int b) {
                     body.write(b);
+                }
+
+                @Override
+                public void write(byte[] b, int off, int len) {
+                    body.write(b, off, len);
                 }
 
                 @Override

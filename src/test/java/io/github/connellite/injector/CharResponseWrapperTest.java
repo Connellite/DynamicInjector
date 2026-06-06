@@ -41,7 +41,7 @@ class CharResponseWrapperTest {
     }
 
     @Test
-    void rejectsWriterAfterStream() {
+    void rejectsWriterAfterStream() throws IOException {
         CharResponseWrapper wrapper = new CharResponseWrapper(new StubHttpServletResponse(), MAX_BUFFER);
         wrapper.getOutputStream();
 
@@ -57,8 +57,9 @@ class CharResponseWrapperTest {
     }
 
     @Test
-    void enforcesMaxBufferSize() {
+    void enforcesMaxBufferSizeForHtmlStream() {
         CharResponseWrapper wrapper = new CharResponseWrapper(new StubHttpServletResponse(), 4);
+        wrapper.setContentType("text/html;charset=UTF-8");
 
         IOException error = assertThrows(IOException.class, () -> wrapper.getOutputStream().write(new byte[5]));
         assertTrue(error.getMessage().contains("buffer limit"));
@@ -82,7 +83,7 @@ class CharResponseWrapperTest {
     void allowsUnlimitedBufferSize() throws IOException {
         CharResponseWrapper wrapper = new CharResponseWrapper(
                 new StubHttpServletResponse(),
-                CharResponseWrapper.UNLIMITED_BUFFER_CHARS
+                BufferLimits.UNLIMITED
         );
 
         wrapper.getOutputStream().write(new byte[10_000]);
@@ -91,8 +92,9 @@ class CharResponseWrapperTest {
     }
 
     @Test
-    void enforcesMaxBufferSizeAtExactLimit() throws IOException {
+    void enforcesMaxBufferSizeAtExactLimitForHtml() throws IOException {
         CharResponseWrapper wrapper = new CharResponseWrapper(new StubHttpServletResponse(), 4);
+        wrapper.setContentType("text/html;charset=UTF-8");
 
         wrapper.getOutputStream().write(new byte[]{1, 2, 3, 4});
 
@@ -121,15 +123,94 @@ class CharResponseWrapperTest {
     }
 
     @Test
-    void readsWriterBodyWithConfiguredCharset() {
+    void readsWriterBodyWithConfiguredCharset() throws IOException {
         StubHttpServletResponse response = new StubHttpServletResponse();
         response.setCharacterEncoding("ISO-8859-1");
         CharResponseWrapper wrapper = new CharResponseWrapper(response, 1024);
+        wrapper.setContentType("text/html;charset=ISO-8859-1");
 
         try (PrintWriter writer = wrapper.getWriter()) {
             writer.write("caf\u00E9");
         }
 
         assertArrayEquals("caf\u00E9".getBytes(StandardCharsets.ISO_8859_1), wrapper.getBodyAsBytes());
+    }
+
+    @Test
+    void streamsNonHtmlResponsesWithoutBuffering() throws IOException {
+        StubHttpServletResponse response = new StubHttpServletResponse();
+        CharResponseWrapper wrapper = new CharResponseWrapper(response, 4);
+
+        wrapper.setContentType("application/octet-stream");
+        wrapper.getOutputStream().write(new byte[1000]);
+
+        assertTrue(wrapper.isPassthrough());
+        assertEquals(0, wrapper.getBodyAsBytes().length);
+        assertEquals(1000, response.getBodyBytes().length);
+    }
+
+    @Test
+    void stillBuffersHtmlAfterContentTypeIsSet() throws IOException {
+        StubHttpServletResponse response = new StubHttpServletResponse();
+        CharResponseWrapper wrapper = new CharResponseWrapper(response, 1024);
+
+        wrapper.setContentType("text/html;charset=UTF-8");
+        wrapper.getOutputStream().write("hello".getBytes(StandardCharsets.UTF_8));
+
+        assertFalse(wrapper.isPassthrough());
+        assertEquals("hello", wrapper.getBodyAsString());
+    }
+
+    @Test
+    void writerStillBuffersAfterNonHtmlContentType() throws IOException {
+        StubHttpServletResponse response = new StubHttpServletResponse();
+        CharResponseWrapper wrapper = new CharResponseWrapper(response, 1024);
+
+        try (PrintWriter writer = wrapper.getWriter()) {
+            writer.write("{\"ok\":true}");
+        }
+        wrapper.setContentType("application/json");
+
+        assertFalse(wrapper.isPassthrough());
+        assertEquals("{\"ok\":true}", wrapper.getBodyAsString());
+    }
+
+    @Test
+    void switchesToPassthroughWhenUndecidedWriteExceedsLimit() throws IOException {
+        StubHttpServletResponse response = new StubHttpServletResponse();
+        CharResponseWrapper wrapper = new CharResponseWrapper(response, 4);
+
+        wrapper.getOutputStream().write(new byte[1000]);
+
+        assertTrue(wrapper.isPassthrough());
+        assertEquals(0, wrapper.getBodyAsBytes().length);
+        assertEquals(1000, response.getBodyBytes().length);
+    }
+
+    @Test
+    void streamsAfterLateContentTypeWithoutKeepingEntirePayload() throws IOException {
+        StubHttpServletResponse response = new StubHttpServletResponse();
+        CharResponseWrapper wrapper = new CharResponseWrapper(response, 4);
+
+        wrapper.getOutputStream().write(new byte[]{1, 2});
+        wrapper.setContentType("application/pdf");
+        wrapper.getOutputStream().write(new byte[]{3, 4, 5, 6, 7});
+
+        assertTrue(wrapper.isPassthrough());
+        assertEquals(0, wrapper.getBodyAsBytes().length);
+        assertEquals(7, response.getBodyBytes().length);
+    }
+
+    @Test
+    void flushesPrefatoryBytesWhenSwitchingToStreaming() throws IOException {
+        StubHttpServletResponse response = new StubHttpServletResponse();
+        CharResponseWrapper wrapper = new CharResponseWrapper(response, 1024);
+
+        wrapper.getOutputStream().write(new byte[]{1, 2});
+        wrapper.setContentType("application/pdf");
+        wrapper.getOutputStream().write(new byte[]{3, 4, 5});
+
+        assertTrue(wrapper.isPassthrough());
+        assertArrayEquals(new byte[]{1, 2, 3, 4, 5}, response.getBodyBytes());
     }
 }

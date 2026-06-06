@@ -7,7 +7,7 @@ import java.io.CharArrayWriter;
 @RequiredArgsConstructor
 public final class BoundedCharArrayWriter extends CharArrayWriter {
 
-    private final long maxChars;
+    private final long maxBufferSize;
 
     @Override
     public void write(int c) {
@@ -47,12 +47,12 @@ public final class BoundedCharArrayWriter extends CharArrayWriter {
     }
 
     private void ensureCapacity(int additionalChars) {
-        if (additionalChars <= 0 || maxChars == CharResponseWrapper.UNLIMITED_BUFFER_CHARS) {
+        if (additionalChars <= 0 || BufferLimits.isUnlimited(maxBufferSize)) {
             return;
         }
         long nextSize = (long) size() + additionalChars;
-        if (nextSize > maxChars) {
-            throw new IllegalStateException("Response body exceeds buffer limit of " + maxChars + " characters");
+        if (nextSize > maxBufferSize) {
+            throw new IllegalStateException("Response body exceeds buffer limit of " + maxBufferSize + " characters");
         }
     }
 }

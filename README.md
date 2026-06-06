@@ -5,7 +5,8 @@ A servlet filter that dynamically injects CSS, JavaScript, and HTML fragments in
 ## Features
 
 - Buffers downstream HTML safely (writer **or** output stream, never both)
-- Skips non-`text/html` responses and forwards the original body unchanged
+- Streams non-`text/html` file responses directly once `Content-Type` is set
+- Falls back to buffering for non-HTML responses without a `Content-Type`
 - Resolves injectable files from `servletPath` + `pathInfo` (wildcard mappings)
 - Blocks path traversal under the configured resource root
 - Optional response size limit to avoid unbounded memory use
@@ -45,7 +46,7 @@ Examples:
     </init-param>
     <!-- Optional: default 5242880 (5 MiB) -->
     <init-param>
-        <param-name>maxBufferBytes</param-name>
+        <param-name>maxBufferSize</param-name>
         <param-value>5242880</param-value>
     </init-param>
     <!-- Optional: skip buffering/injection for matching paths (Spring Ant-style) -->
@@ -72,23 +73,26 @@ Examples:
 | Name | Required | Description |
 |------|----------|-------------|
 | `resources` | yes | Directory with `.css` / `.js` / `.html` fragments |
-| `maxBufferBytes` | no | Max buffered response size (default `5242880`, 5 MiB). Parsed by the filter and passed to `CharResponseWrapper` as `maxBufferChars`. |
+| `maxBufferSize` | no | Max buffered **HTML** size (default `5242880`, 5 MiB). |
 | `excludeUrlPatterns` | no | Comma- or space-separated Ant-style patterns. Matching requests bypass the filter entirely (no buffering, no injection). Based on [Spring AntPathMatcher](https://github.com/spring-projects/spring-framework/blob/main/spring-core/src/main/java/org/springframework/util/AntPathMatcher.java). |
-| `bufferLimitDisabled` | no | When `true`, disables the response buffer size limit (default `false`). Ignores `maxBufferBytes`. Use with care on large responses. |
+| `bufferLimitDisabled` | no | When `true`, disables the HTML buffer size limit (default `false`). Ignores `maxBufferSize`. Use with care on large HTML responses. |
 
-### Buffer limit: `maxBufferBytes` and `maxBufferChars`
+### Buffer limit: `maxBufferSize`
 
-- **`maxBufferBytes`** — init parameter in `web.xml` (bytes).
-- **`maxBufferChars`** — internal limit in `CharResponseWrapper`; the filter passes the parsed `maxBufferBytes` value into the wrapper under this name.
+- Applies to **HTML buffering** via `getWriter()` or `getOutputStream()` after `Content-Type: text/html`.
+- **File/binary** responses stream when `Content-Type` is non-HTML, or when buffered volume exceeds the limit while the type is still unknown.
+- `getWriter()` always buffers (injection and text APIs use characters); non-HTML writer responses cannot stream.
 
-How the limit is applied:
+| Output channel | When | Behaviour |
+|----------------|------|-----------|
+| `getOutputStream()` + file type | `Content-Type` set before/at write | passthrough |
+| `getOutputStream()` + unknown type | exceeds `maxBufferSize` | auto passthrough |
+| `getOutputStream()` + `text/html` | always | buffered |
+| `getWriter()` | always | buffered |
 
-| Output channel | Class | Unit |
-|----------------|-------|------|
-| `getWriter()` | `BoundedCharArrayWriter` | characters |
-| `getOutputStream()` | `BufferedServletOutputStream` | bytes |
+### File downloads
 
-Both channels share the same numeric limit from `maxBufferBytes`. When `bufferLimitDisabled=true`, the wrapper uses unlimited buffering (`UNLIMITED_BUFFER_CHARS`).
+When the downstream servlet sets a non-`text/html` `Content-Type` (for example `application/octet-stream`) before writing the body, the filter streams bytes directly to the client without buffering the whole file. `excludeUrlPatterns` remains useful to skip the filter entirely on known download endpoints.
 
 ### Exclude pattern examples
 
@@ -102,7 +106,7 @@ Both channels share the same numeric limit from `maxBufferBytes`. When `bufferLi
 
 
 
-For file downloads and other large binary responses, prefer `excludeUrlPatterns` over increasing `maxBufferBytes` or setting `bufferLimitDisabled=true`.
+For file downloads, prefer streaming via `getOutputStream()` and a non-HTML `Content-Type`. Use `excludeUrlPatterns` only when the filter should be skipped entirely.
 
 
 

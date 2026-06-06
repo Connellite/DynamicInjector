@@ -15,7 +15,7 @@ import java.io.IOException;
 public final class BufferedServletOutputStream extends ServletOutputStream {
 
     private final ByteArrayOutputStream buffer;
-    private final long maxBufferBytes;
+    private final long maxBufferSize;
 
     @Override
     public boolean isReady() {
@@ -40,12 +40,12 @@ public final class BufferedServletOutputStream extends ServletOutputStream {
     }
 
     private void ensureCapacity(int additionalBytes) throws IOException {
-        if (maxBufferBytes == CharResponseWrapper.UNLIMITED_BUFFER_CHARS) {
+        if (BufferLimits.isUnlimited(maxBufferSize)) {
             return;
         }
         long nextSize = (long) buffer.size() + additionalBytes;
-        if (nextSize > maxBufferBytes) {
-            throw new IOException("Response body exceeds buffer limit of " + maxBufferBytes + " bytes");
+        if (nextSize > maxBufferSize) {
+            throw new IOException("Response body exceeds buffer limit of " + maxBufferSize + " bytes");
         }
     }
 }
