@@ -9,14 +9,31 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 #endif
+import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.Locale;
 
+#if JAKARTA
+import jakarta.servlet.WriteListener;
+#else
+import javax.servlet.WriteListener;
+#endif
+
 /**
- * Minimal {@link HttpServletResponse} stub for unit tests (body methods are unused).
+ * Minimal {@link HttpServletResponse} stub for unit tests.
  */
 class StubHttpServletResponse implements HttpServletResponse {
+
+    private String characterEncoding;
+    private String contentType;
+    private long contentLength = -1;
+    private final ByteArrayOutputStream body = new ByteArrayOutputStream();
+    private ServletOutputStream outputStream;
+
+    long getContentLengthLong() {
+        return contentLength;
+    }
 
     @Override
     public void addCookie(Cookie cookie) {
@@ -117,17 +134,34 @@ class StubHttpServletResponse implements HttpServletResponse {
 
     @Override
     public String getCharacterEncoding() {
-        return null;
+        return characterEncoding;
     }
 
     @Override
     public String getContentType() {
-        return null;
+        return contentType;
     }
 
     @Override
     public ServletOutputStream getOutputStream() {
-        return null;
+        if (outputStream == null) {
+            outputStream = new ServletOutputStream() {
+                @Override
+                public void write(int b) {
+                    body.write(b);
+                }
+
+                @Override
+                public boolean isReady() {
+                    return true;
+                }
+
+                @Override
+                public void setWriteListener(WriteListener listener) {
+                }
+            };
+        }
+        return outputStream;
     }
 
     @Override
@@ -137,18 +171,22 @@ class StubHttpServletResponse implements HttpServletResponse {
 
     @Override
     public void setCharacterEncoding(String charset) {
+        this.characterEncoding = charset;
     }
 
     @Override
     public void setContentLength(int len) {
+        this.contentLength = len;
     }
 
     @Override
     public void setContentLengthLong(long len) {
+        this.contentLength = len;
     }
 
     @Override
     public void setContentType(String type) {
+        this.contentType = type;
     }
 
     @Override

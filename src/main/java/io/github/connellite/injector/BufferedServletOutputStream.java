@@ -40,7 +40,7 @@ public final class BufferedServletOutputStream extends ServletOutputStream {
     }
 
     private void ensureCapacity(int additionalBytes) throws IOException {
-        if (maxBufferBytes == CharResponseWrapper.UNLIMITED_BUFFER_BYTES) {
+        if (maxBufferBytes == CharResponseWrapper.UNLIMITED_BUFFER_CHARS) {
             return;
         }
         long nextSize = (long) buffer.size() + additionalBytes;

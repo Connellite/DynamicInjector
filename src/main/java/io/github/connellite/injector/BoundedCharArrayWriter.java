@@ -47,7 +47,7 @@ public final class BoundedCharArrayWriter extends CharArrayWriter {
     }
 
     private void ensureCapacity(int additionalChars) {
-        if (additionalChars <= 0 || maxChars == CharResponseWrapper.UNLIMITED_BUFFER_BYTES) {
+        if (additionalChars <= 0 || maxChars == CharResponseWrapper.UNLIMITED_BUFFER_CHARS) {
             return;
         }
         long nextSize = (long) size() + additionalChars;

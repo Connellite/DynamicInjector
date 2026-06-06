@@ -104,6 +104,53 @@ class ResourcePathResolverTest {
         assertEquals(input, result);
     }
 
+    @Test
+    void blocksSingleEncodedPathTraversal() {
+        ResourcePathResolver resolver = new ResourcePathResolver("/safe/dir");
+        assertThrows(SecurityException.class, () -> resolver.resolveResourcePath("%2e%2e%2fetc/passwd", ".txt"));
+    }
+
+    @Test
+    void doubleEncodedPathTraversalStaysInsideResourceRoot() {
+        ResourcePathResolver resolver = new ResourcePathResolver("/safe/dir");
+        Path result = resolver.resolveResourcePath("%252e%252e%252fsecret", ".txt");
+        assertPathsEqual("/safe/dir/%2e%2e%2fsecret.txt", result);
+    }
+
+    @Test
+    void resolveUtf8EncodedPath() {
+        ResourcePathResolver resolver = new ResourcePathResolver("/resources");
+        Path result = resolver.resolveResourcePath("/%D0%BF%D1%83%D1%82%D1%8C/page", ".html");
+        assertPathsEqual("/resources/путь/page.html", result);
+    }
+
+    @Test
+    void requestPathCombinesServletPathAndPathInfo() {
+        StubHttpServletRequest request = new StubHttpServletRequest();
+        request.setServletPath("/app");
+        request.setPathInfo("/home");
+
+        assertEquals("/app/home", ResourcePathResolver.requestPath(request));
+    }
+
+    @Test
+    void requestPathUsesServletPathWhenPathInfoMissing() {
+        StubHttpServletRequest request = new StubHttpServletRequest();
+        request.setServletPath("/login.jsp");
+        request.setPathInfo(null);
+
+        assertEquals("/login.jsp", ResourcePathResolver.requestPath(request));
+    }
+
+    @Test
+    void requestPathUsesPathInfoWhenServletPathEmpty() {
+        StubHttpServletRequest request = new StubHttpServletRequest();
+        request.setServletPath("");
+        request.setPathInfo("/wildcard/home");
+
+        assertEquals("/wildcard/home", ResourcePathResolver.requestPath(request));
+    }
+
     private void assertPathsEqual(String expected, Path actual) {
         assertEquals(
                 Paths.get(expected).normalize().toString(),

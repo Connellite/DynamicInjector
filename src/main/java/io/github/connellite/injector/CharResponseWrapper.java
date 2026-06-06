@@ -22,13 +22,13 @@ import java.nio.charset.StandardCharsets;
  */
 public class CharResponseWrapper extends HttpServletResponseWrapper {
 
-    static final long UNLIMITED_BUFFER_BYTES = Long.MAX_VALUE;
+    static final long UNLIMITED_BUFFER_CHARS = Long.MAX_VALUE;
 
     private enum OutputChannel {
         NONE, WRITER, STREAM
     }
 
-    private final long maxBufferBytes;
+    private final long maxBufferChars;
 
     private OutputChannel channel = OutputChannel.NONE;
     private CharArrayWriter charBuffer;
@@ -36,12 +36,12 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
     private ServletOutputStream servletOutputStream;
     private PrintWriter writer;
 
-    public CharResponseWrapper(HttpServletResponse response, long maxBufferBytes) {
+    public CharResponseWrapper(HttpServletResponse response, long maxBufferChars) {
         super(response);
-        if (maxBufferBytes <= 0) {
-            throw new IllegalArgumentException("maxBufferBytes must be positive");
+        if (maxBufferChars <= 0) {
+            throw new IllegalArgumentException("maxBufferChars must be positive");
         }
-        this.maxBufferBytes = maxBufferBytes;
+        this.maxBufferChars = maxBufferChars;
     }
 
     @Override
@@ -52,7 +52,7 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
         if (channel == OutputChannel.NONE) {
             channel = OutputChannel.STREAM;
             byteBuffer = new ByteArrayOutputStream();
-            servletOutputStream = new BufferedServletOutputStream(byteBuffer, maxBufferBytes);
+            servletOutputStream = new BufferedServletOutputStream(byteBuffer, maxBufferChars);
         }
         return servletOutputStream;
     }
@@ -64,7 +64,7 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
         }
         if (channel == OutputChannel.NONE) {
             channel = OutputChannel.WRITER;
-            charBuffer = new BoundedCharArrayWriter(maxBufferBytes);
+            charBuffer = new BoundedCharArrayWriter(maxBufferChars);
             writer = new PrintWriter(charBuffer, true);
         }
         return writer;
@@ -103,17 +103,24 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
         if (body.length == 0) {
             return;
         }
-        response.setContentLength(body.length);
+        response.setContentLengthLong(body.length);
         ServletOutputStream outputStream = response.getOutputStream();
         outputStream.write(body);
         outputStream.flush();
     }
 
-    private Charset characterEncodingOrUtf8() {
-        String encoding = getCharacterEncoding();
-        if (encoding == null || encoding.isEmpty()) {
+    static Charset resolveCharset(String encoding) {
+        if (encoding == null || encoding.isBlank()) {
             return StandardCharsets.UTF_8;
         }
-        return Charset.forName(encoding);
+        try {
+            return Charset.forName(encoding.trim());
+        } catch (RuntimeException e) {
+            return StandardCharsets.UTF_8;
+        }
+    }
+
+    private Charset characterEncodingOrUtf8() {
+        return resolveCharset(getCharacterEncoding());
     }
 }

@@ -22,9 +22,8 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 #endif
-import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.logging.Level;
@@ -32,48 +31,21 @@ import java.util.logging.Level;
 @Log
 public class DynamicResourceInjectFilter implements Filter {
 
-    static final String PARAM_RESOURCES = "resources";
-    static final String PARAM_MAX_BUFFER_BYTES = "maxBufferBytes";
-    static final String PARAM_BUFFER_LIMIT_DISABLED = "bufferLimitDisabled";
-    static final String PARAM_EXCLUDE_URL_PATTERNS = "excludeUrlPatterns";
-    static final long DEFAULT_MAX_BUFFER_BYTES = 5 * 1024 * 1024;
-
     private ResourcePathResolver resolver;
-    private long maxBufferBytes = DEFAULT_MAX_BUFFER_BYTES;
+    private long maxBufferChars = FilterConfigParser.DEFAULT_MAX_BUFFER_BYTES;
     private List<String> excludeUrlPatterns = List.of();
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
-        String resourceRoot = filterConfig.getInitParameter(PARAM_RESOURCES);
-
-        if (resourceRoot == null || resourceRoot.trim().isEmpty()) {
-            String errorMsg = "Filter init parameter '" + PARAM_RESOURCES + "' is not configured.";
-            log.severe(errorMsg);
-            throw new ServletException(errorMsg);
+        try {
+            FilterConfigParser.Settings settings = FilterConfigParser.parse(filterConfig);
+            this.maxBufferChars = settings.maxBufferChars();
+            this.excludeUrlPatterns = settings.excludeUrlPatterns();
+            this.resolver = new ResourcePathResolver(settings.resourceRoot());
+        } catch (ServletException e) {
+            log.severe(e.getMessage());
+            throw e;
         }
-
-        File rootDir = new File(resourceRoot);
-        if (!rootDir.exists() || !rootDir.isDirectory() || !rootDir.canRead()) {
-            String errorMsg = "Resource directory does not exist or is not readable: " + resourceRoot;
-            log.severe(errorMsg);
-            throw new ServletException(errorMsg);
-        }
-
-        excludeUrlPatterns = UrlPatternMatcher.parsePatterns(
-                filterConfig.getInitParameter(PARAM_EXCLUDE_URL_PATTERNS)
-        );
-
-        if (parseBoolean(filterConfig.getInitParameter(PARAM_BUFFER_LIMIT_DISABLED), false)) {
-            maxBufferBytes = CharResponseWrapper.UNLIMITED_BUFFER_BYTES;
-        } else {
-            maxBufferBytes = parsePositiveLong(
-                    filterConfig.getInitParameter(PARAM_MAX_BUFFER_BYTES),
-                    DEFAULT_MAX_BUFFER_BYTES,
-                    PARAM_MAX_BUFFER_BYTES
-            );
-        }
-
-        this.resolver = new ResourcePathResolver(resourceRoot);
     }
 
     @Override
@@ -95,7 +67,7 @@ public class DynamicResourceInjectFilter implements Filter {
             return;
         }
 
-        CharResponseWrapper wrappedResponse = new CharResponseWrapper(httpResponse, maxBufferBytes);
+        CharResponseWrapper wrappedResponse = new CharResponseWrapper(httpResponse, maxBufferChars);
         try {
             chain.doFilter(request, wrappedResponse);
             writeResponse(httpRequest, httpResponse, wrappedResponse);
@@ -125,6 +97,7 @@ public class DynamicResourceInjectFilter implements Filter {
         }
 
         if (!isHtmlContent(wrappedResponse.getContentType())) {
+            // resetBuffer() only; preserves headers set by the downstream servlet.
             response.resetBuffer();
             wrappedResponse.writeBodyTo(response);
             return;
@@ -147,11 +120,13 @@ public class DynamicResourceInjectFilter implements Filter {
                 .injectHtmlFragment(fragment)
                 .toHtml();
 
-        byte[] body = modifiedHtml.getBytes(StandardCharsets.UTF_8);
+        Charset charset = CharResponseWrapper.resolveCharset(wrappedResponse.getCharacterEncoding());
+        byte[] body = modifiedHtml.getBytes(charset);
+        // resetBuffer() clears the body but keeps headers (ETag, Content-Language, etc.); do not use reset().
         response.resetBuffer();
-        response.setContentType("text/html; charset=UTF-8");
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.setContentLength(body.length);
+        response.setContentType("text/html; charset=" + charset.name());
+        response.setCharacterEncoding(charset.name());
+        response.setContentLengthLong(body.length);
         response.getOutputStream().write(body);
     }
 
@@ -173,28 +148,6 @@ public class DynamicResourceInjectFilter implements Filter {
 
     private static boolean isHtmlContent(String contentType) {
         return contentType != null && contentType.toLowerCase().startsWith("text/html");
-    }
-
-    private static boolean parseBoolean(String rawValue, boolean defaultValue) {
-        if (rawValue == null || rawValue.trim().isEmpty()) {
-            return defaultValue;
-        }
-        return Boolean.parseBoolean(rawValue.trim());
-    }
-
-    private static long parsePositiveLong(String rawValue, long defaultValue, String paramName) throws ServletException {
-        if (rawValue == null || rawValue.isBlank()) {
-            return defaultValue;
-        }
-        try {
-            long value = Long.parseLong(rawValue.trim());
-            if (value <= 0) {
-                throw new NumberFormatException("not positive");
-            }
-            return value;
-        } catch (NumberFormatException e) {
-            throw new ServletException("Invalid filter init parameter '" + paramName + "': " + rawValue, e);
-        }
     }
 
     private static void sendErrorIfPossible(HttpServletResponse response, int status, Throwable cause) throws ServletException, IOException {

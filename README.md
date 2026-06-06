@@ -10,6 +10,9 @@ A servlet filter that dynamically injects CSS, JavaScript, and HTML fragments in
 - Blocks path traversal under the configured resource root
 - Optional response size limit to avoid unbounded memory use
 
+- Ant-style URL exclusions to bypass the filter for downloads and other non-HTML endpoints
+- Optional flag to disable the buffer size limit
+
 ## Resource layout
 
 ```
@@ -23,6 +26,12 @@ A servlet filter that dynamically injects CSS, JavaScript, and HTML fragments in
 ```
 
 For request `/home` or `/app/home` (mapping dependent), the filter looks for `home.css`, `home.js`, and `home.html` under the resource root.
+
+Examples:
+| Request URL | Files loaded |
+|-------------|--------------|
+| `http://host:8080/login.jsp` | `login.css`, `login.js`, `login.html` |
+| `http://host:8080/` | `.css`, `.js`, `.html` |
 
 ## `web.xml` configuration
 
@@ -63,9 +72,39 @@ For request `/home` or `/app/home` (mapping dependent), the filter looks for `ho
 | Name | Required | Description |
 |------|----------|-------------|
 | `resources` | yes | Directory with `.css` / `.js` / `.html` fragments |
-| `maxBufferBytes` | no | Max buffered response size (default `5242880`) |
-| `excludeUrlPatterns` | no | Comma- or space-separated Ant-style patterns to bypass the filter (`/Download/**`, `/*.jsp`, `/exact/path`). Based on [Spring AntPathMatcher](https://github.com/spring-projects/spring-framework/blob/main/spring-core/src/main/java/org/springframework/util/AntPathMatcher.java). |
-| `bufferLimitDisabled` | no | When `true`, disables the response buffer size limit (default `false`) |
+| `maxBufferBytes` | no | Max buffered response size (default `5242880`, 5 MiB). Parsed by the filter and passed to `CharResponseWrapper` as `maxBufferChars`. |
+| `excludeUrlPatterns` | no | Comma- or space-separated Ant-style patterns. Matching requests bypass the filter entirely (no buffering, no injection). Based on [Spring AntPathMatcher](https://github.com/spring-projects/spring-framework/blob/main/spring-core/src/main/java/org/springframework/util/AntPathMatcher.java). |
+| `bufferLimitDisabled` | no | When `true`, disables the response buffer size limit (default `false`). Ignores `maxBufferBytes`. Use with care on large responses. |
+
+### Buffer limit: `maxBufferBytes` and `maxBufferChars`
+
+- **`maxBufferBytes`** — init parameter in `web.xml` (bytes).
+- **`maxBufferChars`** — internal limit in `CharResponseWrapper`; the filter passes the parsed `maxBufferBytes` value into the wrapper under this name.
+
+How the limit is applied:
+
+| Output channel | Class | Unit |
+|----------------|-------|------|
+| `getWriter()` | `BoundedCharArrayWriter` | characters |
+| `getOutputStream()` | `BufferedServletOutputStream` | bytes |
+
+Both channels share the same numeric limit from `maxBufferBytes`. When `bufferLimitDisabled=true`, the wrapper uses unlimited buffering (`UNLIMITED_BUFFER_CHARS`).
+
+### Exclude pattern examples
+
+| Pattern | Matches | Does not match |
+|---------|---------|----------------|
+| `/Download/**` | `/Download`, `/Download/file.pdf` | `/Downloads/file.pdf` |
+| `/Download/*` | `/Download/file.pdf` | `/Download` |
+| `/*.jsp` | `/login.jsp` | `/app/login.jsp` |
+| `/**/*.jsp` | `/login.jsp`, `/app/login.jsp` | `/login.html` |
+| `/health` | `/health` only | `/health/check` |
+
+
+
+For file downloads and other large binary responses, prefer `excludeUrlPatterns` over increasing `maxBufferBytes` or setting `bufferLimitDisabled=true`.
+
+
 
 ## Requirements
 
@@ -79,6 +118,7 @@ For request `/home` or `/app/home` (mapping dependent), the filter looks for `ho
 |---------|-------------|
 | `javax` (default) | `javax.servlet` 4.0 |
 | `jakarta` | `jakarta.servlet` 6.0 |
+
 ```bash
 mvn clean package
 mvn clean package -Pjakarta

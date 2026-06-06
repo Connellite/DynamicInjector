@@ -82,11 +82,54 @@ class CharResponseWrapperTest {
     void allowsUnlimitedBufferSize() throws IOException {
         CharResponseWrapper wrapper = new CharResponseWrapper(
                 new StubHttpServletResponse(),
-                CharResponseWrapper.UNLIMITED_BUFFER_BYTES
+                CharResponseWrapper.UNLIMITED_BUFFER_CHARS
         );
 
         wrapper.getOutputStream().write(new byte[10_000]);
 
         assertEquals(10_000, wrapper.getBodyAsBytes().length);
+    }
+
+    @Test
+    void enforcesMaxBufferSizeAtExactLimit() throws IOException {
+        CharResponseWrapper wrapper = new CharResponseWrapper(new StubHttpServletResponse(), 4);
+
+        wrapper.getOutputStream().write(new byte[]{1, 2, 3, 4});
+
+        assertEquals(4, wrapper.getBodyAsBytes().length);
+    }
+
+    @Test
+    void writeBodyToUsesContentLengthLong() throws IOException {
+        StubHttpServletResponse response = new StubHttpServletResponse();
+        CharResponseWrapper wrapper = new CharResponseWrapper(response, 1024);
+        wrapper.getOutputStream().write(new byte[]{1, 2, 3});
+
+        wrapper.writeBodyTo(response);
+
+        assertEquals(3, response.getContentLengthLong());
+    }
+
+    @Test
+    void resolveCharsetFallsBackToUtf8ForUnknownEncoding() {
+        assertEquals(StandardCharsets.UTF_8, CharResponseWrapper.resolveCharset("X-UNKNOWN-CHARSET"));
+    }
+
+    @Test
+    void resolveCharsetUsesValidEncoding() {
+        assertEquals(StandardCharsets.ISO_8859_1, CharResponseWrapper.resolveCharset("ISO-8859-1"));
+    }
+
+    @Test
+    void readsWriterBodyWithConfiguredCharset() {
+        StubHttpServletResponse response = new StubHttpServletResponse();
+        response.setCharacterEncoding("ISO-8859-1");
+        CharResponseWrapper wrapper = new CharResponseWrapper(response, 1024);
+
+        try (PrintWriter writer = wrapper.getWriter()) {
+            writer.write("caf\u00E9");
+        }
+
+        assertArrayEquals("caf\u00E9".getBytes(StandardCharsets.ISO_8859_1), wrapper.getBodyAsBytes());
     }
 }

@@ -44,6 +44,8 @@ class StubHttpServletRequest implements HttpServletRequest {
 
     private String contextPath = "";
     private String requestUri = "/";
+    private String servletPath = "/";
+    private String pathInfo;
 
     void setContextPath(String contextPath) {
         this.contextPath = contextPath;
@@ -51,6 +53,14 @@ class StubHttpServletRequest implements HttpServletRequest {
 
     void setRequestUri(String requestUri) {
         this.requestUri = requestUri;
+    }
+
+    void setServletPath(String servletPath) {
+        this.servletPath = servletPath;
+    }
+
+    void setPathInfo(String pathInfo) {
+        this.pathInfo = pathInfo;
     }
 
     @Override
@@ -105,7 +115,7 @@ class StubHttpServletRequest implements HttpServletRequest {
 
     @Override
     public String getPathInfo() {
-        return null;
+        return pathInfo;
     }
 
     @Override
@@ -145,7 +155,7 @@ class StubHttpServletRequest implements HttpServletRequest {
 
     @Override
     public String getServletPath() {
-        return requestUri;
+        return servletPath;
     }
 
     @Override
