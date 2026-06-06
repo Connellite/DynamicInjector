@@ -1,5 +1,7 @@
-package io.github.connellite.injector;
+package io.github.connellite.injector.config;
 
+import io.github.connellite.injector.pattern.UrlPatternMatcher;
+import io.github.connellite.injector.util.BufferLimits;
 import lombok.experimental.UtilityClass;
 
 #if JAKARTA
@@ -13,18 +15,18 @@ import java.io.File;
 import java.util.List;
 
 @UtilityClass
-final class FilterConfigParser {
+public final class FilterConfigParser {
 
-    static final String PARAM_RESOURCES = "resources";
-    static final String PARAM_MAX_BUFFER_SIZE = "maxBufferSize";
-    static final String PARAM_BUFFER_LIMIT_DISABLED = "bufferLimitDisabled";
-    static final String PARAM_EXCLUDE_URL_PATTERNS = "excludeUrlPatterns";
-    static final long DEFAULT_MAX_BUFFER_SIZE = 5 * 1024 * 1024;
+    public static final String PARAM_RESOURCES = "resources";
+    public static final String PARAM_MAX_BUFFER_SIZE = "maxBufferSize";
+    public static final String PARAM_BUFFER_LIMIT_DISABLED = "bufferLimitDisabled";
+    public static final String PARAM_EXCLUDE_URL_PATTERNS = "excludeUrlPatterns";
+    public static final long DEFAULT_MAX_BUFFER_SIZE = 5 * 1024 * 1024;
 
-    record Settings(String resourceRoot, long maxBufferSize, List<String> excludeUrlPatterns) {
+    public record Settings(String resourceRoot, long maxBufferSize, List<String> excludeUrlPatterns) {
     }
 
-    static Settings parse(FilterConfig filterConfig) throws ServletException {
+    public static Settings parse(FilterConfig filterConfig) throws ServletException {
         String resourceRoot = filterConfig.getInitParameter(PARAM_RESOURCES);
         if (resourceRoot == null || resourceRoot.trim().isEmpty()) {
             throw new ServletException("Filter init parameter '" + PARAM_RESOURCES + "' is not configured.");

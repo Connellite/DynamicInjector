@@ -1,4 +1,4 @@
-package io.github.connellite.injector;
+package io.github.connellite.injector.support;
 
 #if JAKARTA
 import jakarta.servlet.ServletOutputStream;
@@ -23,7 +23,7 @@ import javax.servlet.WriteListener;
 /**
  * Minimal {@link HttpServletResponse} stub for unit tests.
  */
-class StubHttpServletResponse implements HttpServletResponse {
+public class StubHttpServletResponse implements HttpServletResponse {
 
     private String characterEncoding;
     private String contentType;
@@ -31,11 +31,11 @@ class StubHttpServletResponse implements HttpServletResponse {
     private final ByteArrayOutputStream body = new ByteArrayOutputStream();
     private ServletOutputStream outputStream;
 
-    long getContentLengthLong() {
+    public long getContentLengthLong() {
         return contentLength;
     }
 
-    byte[] getBodyBytes() {
+    public byte[] getBodyBytes() {
         return body.toByteArray();
     }
 

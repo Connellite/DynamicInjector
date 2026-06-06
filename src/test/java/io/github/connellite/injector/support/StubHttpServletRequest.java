@@ -1,4 +1,4 @@
-package io.github.connellite.injector;
+package io.github.connellite.injector.support;
 
 #if JAKARTA
 import jakarta.servlet.AsyncContext;
@@ -36,32 +36,18 @@ import java.util.Collection;
 import java.util.Enumeration;
 import java.util.Locale;
 import java.util.Map;
+import lombok.Setter;
 
 /**
  * Minimal {@link HttpServletRequest} stub for unit tests.
  */
-class StubHttpServletRequest implements HttpServletRequest {
+@Setter
+public class StubHttpServletRequest implements HttpServletRequest {
 
     private String contextPath = "";
     private String requestUri = "/";
     private String servletPath = "/";
     private String pathInfo;
-
-    void setContextPath(String contextPath) {
-        this.contextPath = contextPath;
-    }
-
-    void setRequestUri(String requestUri) {
-        this.requestUri = requestUri;
-    }
-
-    void setServletPath(String servletPath) {
-        this.servletPath = servletPath;
-    }
-
-    void setPathInfo(String pathInfo) {
-        this.pathInfo = pathInfo;
-    }
 
     @Override
     public String getContextPath() {

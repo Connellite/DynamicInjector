@@ -1,4 +1,6 @@
-package io.github.connellite.injector;
+package io.github.connellite.injector.response;
+
+import io.github.connellite.injector.util.BufferLimits;
 import lombok.RequiredArgsConstructor;
 
 #if JAKARTA

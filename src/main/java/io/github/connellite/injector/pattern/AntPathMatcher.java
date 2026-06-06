@@ -1,4 +1,4 @@
-package io.github.connellite.injector;
+package io.github.connellite.injector.pattern;
 
 import java.util.ArrayList;
 import java.util.List;

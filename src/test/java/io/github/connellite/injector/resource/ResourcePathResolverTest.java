@@ -1,5 +1,6 @@
-package io.github.connellite.injector;
+package io.github.connellite.injector.resource;
 
+import io.github.connellite.injector.support.StubHttpServletRequest;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;

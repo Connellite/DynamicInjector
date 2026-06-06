@@ -1,4 +1,4 @@
-package io.github.connellite.injector;
+package io.github.connellite.injector.util;
 
 import lombok.experimental.UtilityClass;
 

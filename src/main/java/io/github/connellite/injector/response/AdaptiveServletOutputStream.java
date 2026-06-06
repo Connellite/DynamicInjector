@@ -1,4 +1,4 @@
-package io.github.connellite.injector;
+package io.github.connellite.injector.response;
 
 #if JAKARTA
 import jakarta.servlet.ServletOutputStream;

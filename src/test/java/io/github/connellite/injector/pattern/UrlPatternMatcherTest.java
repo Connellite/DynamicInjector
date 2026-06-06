@@ -1,4 +1,4 @@
-package io.github.connellite.injector;
+package io.github.connellite.injector.pattern;
 
 import org.junit.jupiter.api.Test;
 

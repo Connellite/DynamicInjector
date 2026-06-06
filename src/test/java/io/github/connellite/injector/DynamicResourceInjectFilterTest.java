@@ -1,5 +1,6 @@
 package io.github.connellite.injector;
 
+import io.github.connellite.injector.support.StubHttpServletRequest;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

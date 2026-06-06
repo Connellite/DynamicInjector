@@ -1,4 +1,4 @@
-package io.github.connellite.injector;
+package io.github.connellite.injector.pattern;
 
 import lombok.experimental.UtilityClass;
 
@@ -12,13 +12,13 @@ import java.util.List;
  * and the upstream source link.
  */
 @UtilityClass
-final class UrlPatternMatcher {
+public final class UrlPatternMatcher {
 
     private static final class PathMatcherHolder {
         private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
     }
 
-    static List<String> parsePatterns(String rawPatterns) {
+    public static List<String> parsePatterns(String rawPatterns) {
         if (rawPatterns == null || rawPatterns.isBlank()) {
             return List.of();
         }
@@ -28,7 +28,7 @@ final class UrlPatternMatcher {
                 .toList();
     }
 
-    static boolean matchesAny(String path, List<String> patterns) {
+    public static boolean matchesAny(String path, List<String> patterns) {
         for (String pattern : patterns) {
             if (PathMatcherHolder.PATH_MATCHER.match(pattern, path)) {
                 return true;

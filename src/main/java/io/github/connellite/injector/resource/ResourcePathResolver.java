@@ -1,4 +1,6 @@
-package io.github.connellite.injector;
+package io.github.connellite.injector.resource;
+
+import io.github.connellite.injector.util.IoUtils;
 import lombok.RequiredArgsConstructor;
 
 #if JAKARTA

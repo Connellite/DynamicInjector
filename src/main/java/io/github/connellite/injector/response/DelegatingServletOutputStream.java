@@ -1,4 +1,4 @@
-package io.github.connellite.injector;
+package io.github.connellite.injector.response;
 
 import lombok.RequiredArgsConstructor;
 

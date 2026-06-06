@@ -1,4 +1,4 @@
-package io.github.connellite.injector;
+package io.github.connellite.injector.resource;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.java.Log;

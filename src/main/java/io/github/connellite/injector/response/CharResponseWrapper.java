@@ -1,4 +1,6 @@
-package io.github.connellite.injector;
+package io.github.connellite.injector.response;
+
+import io.github.connellite.injector.util.BufferLimits;
 
 #if JAKARTA
 import jakarta.servlet.ServletOutputStream;
@@ -55,7 +57,7 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
         return deliveryMode == DeliveryMode.PASSTHROUGH;
     }
 
-    static boolean isHtmlContent(String contentType) {
+    public static boolean isHtmlContent(String contentType) {
         return contentType != null && contentType.toLowerCase().startsWith("text/html");
     }
 
@@ -154,7 +156,7 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
         outputStream.flush();
     }
 
-    static Charset resolveCharset(String encoding) {
+    public static Charset resolveCharset(String encoding) {
         if (encoding == null || encoding.isBlank()) {
             return StandardCharsets.UTF_8;
         }

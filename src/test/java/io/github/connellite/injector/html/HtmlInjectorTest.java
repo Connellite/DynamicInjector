@@ -1,4 +1,4 @@
-package io.github.connellite.injector;
+package io.github.connellite.injector.html;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
