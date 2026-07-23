@@ -128,4 +128,5 @@ mvn clean package
 mvn clean package -Pjakarta
 ```
 
-Servlet imports are selected at compile time with the [Manifold preprocessor](https://github.com/manifold-systems/manifold/tree/master/manifold-deps-parent/manifold-preprocessor) (`-AJAKARTA` for the `jakarta` profile).
+Servlet imports are selected at compile time with the [Manifold preprocessor](https://github.com/manifold-systems/manifold/tree/master/manifold-deps-parent/manifold-preprocessor)
+(`JAVAX` / `JAKARTA` in `build.properties`).
