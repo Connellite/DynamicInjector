@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -112,6 +113,16 @@ class CharResponseWrapperTest {
         wrapper.writeBodyTo(response);
 
         assertEquals(3, response.getContentLengthLong());
+    }
+
+    @Test
+    void charsetParameterReadsDeclaredCharsetOnly() {
+        assertNull(CharResponseWrapper.charsetParameter(null));
+        assertNull(CharResponseWrapper.charsetParameter("text/html"));
+        assertEquals("UTF-8", CharResponseWrapper.charsetParameter("text/html; charset=UTF-8"));
+        assertEquals("utf-8", CharResponseWrapper.charsetParameter("text/html;charset=\"utf-8\""));
+        assertEquals("UTF-8", CharResponseWrapper.charsetParameter("text/html; Charset = \"UTF-8\""));
+        assertEquals("UTF-8", CharResponseWrapper.charsetParameter("text/html; charset=\"UTF\\-8\""));
     }
 
     @Test

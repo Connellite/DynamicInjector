@@ -6,6 +6,7 @@ import io.github.connellite.injector.pattern.UrlPatternMatcher;
 import io.github.connellite.injector.resource.ResourceLoader;
 import io.github.connellite.injector.resource.ResourcePathResolver;
 import io.github.connellite.injector.response.CharResponseWrapper;
+import io.github.connellite.injector.util.IoUtils;
 import lombok.extern.java.Log;
 
 #if JAKARTA
@@ -31,6 +32,7 @@ import javax.servlet.http.HttpServletResponse;
 #endif
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.logging.Level;
@@ -114,7 +116,6 @@ public class DynamicResourceInjectFilter implements Filter {
             return;
         }
 
-        String html = wrappedResponse.getBodyAsString();
         String requestPath = ResourcePathResolver.requestPath(request);
 
         Path cssPath = resolver.resolveResourcePath(requestPath, ".css");
@@ -125,13 +126,29 @@ public class DynamicResourceInjectFilter implements Filter {
         String js = ResourceLoader.loadResource(jsPath);
         String fragment = ResourceLoader.loadResource(htmlPath);
 
+        // getOutputStream() bytes are already encoded. Rewriting them is required only when
+        // injecting, or when the servlet wrote characters through getWriter().
+        // A missing charset must stay missing: the container reports it as ISO-8859-1.
+        if (!wrappedResponse.usedCharacterWriter() && !hasInjectable(css, js, fragment)) {
+            response.resetBuffer();
+            wrappedResponse.writeBodyTo(response);
+            return;
+        }
+
+        String declaredCharset = CharResponseWrapper.charsetParameter(wrappedResponse.getContentType());
+        Charset charset = declaredCharset == null
+                ? StandardCharsets.UTF_8
+                : CharResponseWrapper.resolveCharset(declaredCharset);
+        String html = wrappedResponse.usedCharacterWriter()
+                ? wrappedResponse.getBodyAsString()
+                : new String(wrappedResponse.getBodyAsBytes(), charset);
+
         String modifiedHtml = HtmlInjector.parse(html)
                 .injectCss(css)
                 .injectJs(js)
                 .injectHtmlFragment(fragment)
                 .toHtml();
 
-        Charset charset = CharResponseWrapper.resolveCharset(wrappedResponse.getCharacterEncoding());
         byte[] body = modifiedHtml.getBytes(charset);
         // resetBuffer() clears the body but keeps headers (ETag, Content-Language, etc.); do not use reset().
         response.resetBuffer();
@@ -139,6 +156,10 @@ public class DynamicResourceInjectFilter implements Filter {
         response.setCharacterEncoding(charset.name());
         response.setContentLengthLong(body.length);
         response.getOutputStream().write(body);
+    }
+
+    private static boolean hasInjectable(String css, String js, String fragment) {
+        return !IoUtils.isBlank(css) || !IoUtils.isBlank(js) || !IoUtils.isBlank(fragment);
     }
 
     private boolean isExcluded(HttpServletRequest request) {

@@ -1,5 +1,6 @@
 package io.github.connellite.injector.response;
 
+import io.github.connellite.injector.http.MediaType;
 import io.github.connellite.injector.util.BufferLimits;
 
 #if JAKARTA
@@ -170,6 +171,23 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
         } catch (RuntimeException e) {
             return StandardCharsets.UTF_8;
         }
+    }
+
+    /**
+     * Charset declared on the Content-Type header, or {@code null} when the header does not name one.
+     * Parsed with Tomcat's media-type reader. {@code getCharacterEncoding()} is not used:
+     * the container returns ISO-8859-1 when the header has no charset.
+     */
+    public static String charsetParameter(String contentType) {
+        MediaType mediaType = MediaType.parse(contentType);
+        if (mediaType == null) {
+            return null;
+        }
+        String charset = mediaType.getCharset();
+        if (charset == null || charset.isBlank()) {
+            return null;
+        }
+        return charset;
     }
 
     void writeStreamByte(int b) throws IOException {
