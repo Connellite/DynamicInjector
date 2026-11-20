@@ -164,6 +164,27 @@ class CharResponseWrapperTest {
     }
 
     @Test
+    void writerBuffersWhenNonHtmlContentTypeIsSetFirst() throws IOException {
+        StubHttpServletResponse response = new StubHttpServletResponse();
+        CharResponseWrapper wrapper = new CharResponseWrapper(response, 1024);
+        String json = "{\"ok\":true}";
+
+        wrapper.setContentType("text/plain");
+        try (PrintWriter writer = wrapper.getWriter()) {
+            writer.write(json);
+        }
+
+        assertFalse(wrapper.isPassthrough());
+        assertTrue(wrapper.hasBody());
+        assertEquals(json, wrapper.getBodyAsString());
+
+        wrapper.writeBodyTo(response);
+
+        assertEquals(json.length(), response.getContentLengthLong());
+        assertArrayEquals(json.getBytes(StandardCharsets.UTF_8), response.getBodyBytes());
+    }
+
+    @Test
     void writerStillBuffersAfterNonHtmlContentType() throws IOException {
         StubHttpServletResponse response = new StubHttpServletResponse();
         CharResponseWrapper wrapper = new CharResponseWrapper(response, 1024);

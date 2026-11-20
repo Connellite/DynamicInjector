@@ -102,6 +102,11 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
         }
         if (channel == OutputChannel.NONE) {
             channel = OutputChannel.WRITER;
+            // setContentType("text/plain") may already have selected PASSTHROUGH.
+            // The writer body stays in charBuffer and has not been sent yet.
+            // https://github.com/openkm/document-management-system/blob/ce175be6e436a752e81ef68068e9f1acf2d28adb/src/main/java/com/openkm/servlet/frontend/FileUploadServlet.java#L87
+            // https://github.com/openkm/document-management-system/blob/ce175be6e436a752e81ef68068e9f1acf2d28adb/src/main/java/com/openkm/servlet/frontend/FileUploadServlet.java#L470
+            deliveryMode = DeliveryMode.BUFFER;
             charBuffer = new BoundedCharArrayWriter(maxBufferSize);
             writer = new PrintWriter(charBuffer, true);
         }
