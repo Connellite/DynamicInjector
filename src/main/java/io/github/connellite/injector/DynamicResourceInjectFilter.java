@@ -96,12 +96,13 @@ public class DynamicResourceInjectFilter implements Filter {
 
     private void writeResponse(HttpServletRequest request, HttpServletResponse response,
                                CharResponseWrapper wrappedResponse) throws IOException {
-        if (response.isCommitted()) {
-            log.fine(() -> "Response already committed for " + request.getRequestURI() + ", skipping injection");
+        if (wrappedResponse.isPassthrough()) {
+            wrappedResponse.finishPassthrough();
             return;
         }
 
-        if (wrappedResponse.isPassthrough()) {
+        if (response.isCommitted()) {
+            log.fine(() -> "Response already committed for " + request.getRequestURI() + ", skipping injection");
             return;
         }
 

@@ -114,6 +114,27 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
         return writer;
     }
 
+    /**
+     * Buffered bodies must not commit the real response before the filter writes them.
+     */
+    @Override
+    public void flushBuffer() throws IOException {
+        if (deliveryMode != DeliveryMode.PASSTHROUGH) {
+            return;
+        }
+        flushPendingBytes();
+        super.flushBuffer();
+    }
+
+    /**
+     * Sends bytes written before the switch to streaming when the servlet wrote nothing afterwards.
+     */
+    public void finishPassthrough() throws IOException {
+        if (deliveryMode == DeliveryMode.PASSTHROUGH) {
+            flushPendingBytes();
+        }
+    }
+
     public boolean hasBody() {
         if (isPassthrough()) {
             return false;
@@ -192,6 +213,7 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
 
     void writeStreamByte(int b) throws IOException {
         if (deliveryMode == DeliveryMode.PASSTHROUGH) {
+            flushPendingBytes();
             passthroughStream().write(b);
             return;
         }
@@ -205,6 +227,7 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
 
         if (shouldSwitchToPassthrough(1)) {
             enablePassthrough();
+            flushPendingBytes();
             passthroughStream().write(b);
             return;
         }
@@ -217,6 +240,7 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
             return;
         }
         if (deliveryMode == DeliveryMode.PASSTHROUGH) {
+            flushPendingBytes();
             passthroughStream().write(source, offset, length);
             return;
         }
@@ -230,6 +254,7 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
 
         if (shouldSwitchToPassthrough(length)) {
             enablePassthrough();
+            flushPendingBytes();
             passthroughStream().write(source, offset, length);
             return;
         }
@@ -255,6 +280,10 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
         }
     }
 
+    /**
+     * Only records the mode. setContentType can run before the servlet has read the request body,
+     * so the real output stream is touched only once body bytes are written or the filter finishes.
+     */
     private void enablePassthrough() {
         if (deliveryMode == DeliveryMode.PASSTHROUGH) {
             return;
@@ -263,15 +292,18 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
             deliveryMode = DeliveryMode.BUFFER;
             return;
         }
-        try {
-            if (channel == OutputChannel.STREAM && byteBuffer != null && byteBuffer.size() > 0) {
-                getResponse().getOutputStream().write(byteBuffer.toByteArray());
-                byteBuffer = null;
-                boundedStream = null;
-            }
-            deliveryMode = DeliveryMode.PASSTHROUGH;
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to enable response streaming", e);
+        deliveryMode = DeliveryMode.PASSTHROUGH;
+    }
+
+    private void flushPendingBytes() throws IOException {
+        if (byteBuffer == null) {
+            return;
+        }
+        byte[] pending = byteBuffer.toByteArray();
+        byteBuffer = null;
+        boundedStream = null;
+        if (pending.length > 0) {
+            passthroughStream().write(pending);
         }
     }
 

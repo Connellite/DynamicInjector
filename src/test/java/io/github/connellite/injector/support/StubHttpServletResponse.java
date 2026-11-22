@@ -30,6 +30,7 @@ public class StubHttpServletResponse implements HttpServletResponse {
     private long contentLength = -1;
     private final ByteArrayOutputStream body = new ByteArrayOutputStream();
     private ServletOutputStream outputStream;
+    private boolean committed;
 
     public long getContentLengthLong() {
         return contentLength;
@@ -209,6 +210,7 @@ public class StubHttpServletResponse implements HttpServletResponse {
 
     @Override
     public void flushBuffer() {
+        committed = true;
     }
 
     @Override
@@ -217,7 +219,7 @@ public class StubHttpServletResponse implements HttpServletResponse {
 
     @Override
     public boolean isCommitted() {
-        return false;
+        return committed;
     }
 
     @Override

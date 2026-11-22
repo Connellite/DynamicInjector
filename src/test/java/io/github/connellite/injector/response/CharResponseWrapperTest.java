@@ -247,4 +247,46 @@ class CharResponseWrapperTest {
         assertTrue(wrapper.isPassthrough());
         assertArrayEquals(new byte[]{1, 2, 3, 4, 5}, response.getBodyBytes());
     }
+
+    @Test
+    void lateContentTypeDoesNotTouchRealStreamUntilBodyOrFinish() throws IOException {
+        StubHttpServletResponse response = new StubHttpServletResponse();
+        CharResponseWrapper wrapper = new CharResponseWrapper(response, 1024);
+
+        wrapper.getOutputStream().write(new byte[]{1, 2});
+        wrapper.setContentType("application/pdf");
+
+        assertTrue(wrapper.isPassthrough());
+        assertEquals(0, response.getBodyBytes().length);
+
+        wrapper.finishPassthrough();
+
+        assertArrayEquals(new byte[]{1, 2}, response.getBodyBytes());
+    }
+
+    @Test
+    void flushBufferDoesNotCommitBufferedWriterBody() throws IOException {
+        StubHttpServletResponse response = new StubHttpServletResponse();
+        CharResponseWrapper wrapper = new CharResponseWrapper(response, 1024);
+
+        wrapper.setContentType("text/plain");
+        wrapper.getWriter().write("{\"ok\":true}");
+        wrapper.flushBuffer();
+
+        assertFalse(response.isCommitted());
+        assertEquals("{\"ok\":true}", wrapper.getBodyAsString());
+    }
+
+    @Test
+    void flushBufferReachesRealResponseWhenStreaming() throws IOException {
+        StubHttpServletResponse response = new StubHttpServletResponse();
+        CharResponseWrapper wrapper = new CharResponseWrapper(response, 1024);
+
+        wrapper.getOutputStream().write(new byte[]{1, 2});
+        wrapper.setContentType("application/pdf");
+        wrapper.flushBuffer();
+
+        assertTrue(response.isCommitted());
+        assertArrayEquals(new byte[]{1, 2}, response.getBodyBytes());
+    }
 }
