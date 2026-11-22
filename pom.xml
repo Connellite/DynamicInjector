@@ -6,7 +6,7 @@
 
     <groupId>io.github.connellite</groupId>
     <artifactId>dynamic-injector</artifactId>
-    <version>1.0-beta-3</version>
+    <version>1.0-beta-4</version>
     <packaging>jar</packaging>
 
     <properties>
